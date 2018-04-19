@@ -85,12 +85,12 @@ int main() {
         string event = j[0].get<string>();
         if (event == "telemetry") {
           // j[1] is the data JSON object
-          vector<double> ptsx = j[1]["ptsx"];
-          vector<double> ptsy = j[1]["ptsy"];
-          double px = j[1]["x"];
-          double py = j[1]["y"];
-          double psi = j[1]["psi"];
-          double v = j[1]["speed"];
+          vector<double> ptsx = j[1]["ptsx"]; // map coordinate
+          vector<double> ptsy = j[1]["ptsy"]; // map coordinate
+          double px = j[1]["x"]; // map coordinate
+          double py = j[1]["y"]; // map coordinate
+          double psi = j[1]["psi"]; // map coordinate
+          double v = j[1]["speed"]; // map coordinate
 
           /*
           * TODO: Calculate steering angle and throttle using MPC.
@@ -98,21 +98,60 @@ int main() {
           * Both are in between [-1, 1].
           *
           */
-          double steer_value;
-          double throttle_value;
+
+          // Transform the waypoints from the map coordinate to the vehicle coordinate
+          assert(ptsx.size() == ptsy.size());
+          Eigen::VectorXd ptsx_car(ptsx.size()); // vehicle coordinate
+          Eigen::VectorXd ptsy_car(ptsx.size()); // vehicle coordinate
+          for (unsigned int i=0; i<ptsx.size(); i++) {
+            double x = ptsx[i] - px;
+            double y = ptsy[i] - py;
+            ptsx_car(i) = x*cos(psi) + y*sin(psi);
+            ptsy_car(i) = -x*sin(psi) + y*cos(psi);
+          }
+
+          // Polynomial fitting in 3rd order
+          auto coeffs_car = polyfit(ptsx_car, ptsy_car, 3); // vehicle coordinate
+
+          double px_car = 0.0; // `px_car` is always 0 in the vehicle coordinate
+          double py_car = 0.0; // `py_car` is always 0 in the vehicle coordinate
+          double psi_car = 0.0; // `psi_car` is always 0 in the vehicle coordinate
+          double v_car = v; // `v_car` in the vehicle coordinate is always same as `v` in the map coordinate
+          double cte_car = polyeval(coeffs_car, px_car) - py_car; // vehicle coordinate
+          double epsi_car = psi_car - atan(coeffs_car[1]); // vehicle coordinate
+
+          Eigen::VectorXd state_car(6); // vehicle coordinate
+          state_car << px_car, py_car, psi_car, v_car, cte_car, epsi_car;
+
+          auto vars = mpc.Solve(state_car, coeffs_car);
+          /*
+           *  vars[0]: delta
+           *  vars[1]: a
+           *  vars[2, 4, 6, ...]: x
+           *  vars[3, 5, 7, ...]: y
+           */
+          double steer_value = vars[0];
+          double throttle_value = vars[1];
 
           json msgJson;
           // NOTE: Remember to divide by deg2rad(25) before you send the steering value back.
           // Otherwise the values will be in between [-deg2rad(25), deg2rad(25] instead of [-1, 1].
-          msgJson["steering_angle"] = steer_value;
+          msgJson["steering_angle"] = steer_value / (deg2rad(25));
           msgJson["throttle"] = throttle_value;
 
-          //Display the MPC predicted trajectory 
+          //Display the MPC predicted trajectory
           vector<double> mpc_x_vals;
           vector<double> mpc_y_vals;
 
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Green line
+          for (unsigned int i=2; i<vars.size(); i++) {
+            if (i%2 == 0) {
+              mpc_x_vals.push_back(vars[i]);
+            } else {
+              mpc_y_vals.push_back(vars[i]);
+            }
+          }
 
           msgJson["mpc_x"] = mpc_x_vals;
           msgJson["mpc_y"] = mpc_y_vals;
@@ -123,6 +162,10 @@ int main() {
 
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Yellow line
+          for (unsigned int i=0; i<100; i+=5) {
+            next_x_vals.push_back(i);
+            next_y_vals.push_back(polyeval(coeffs_car, i));
+          }
 
           msgJson["next_x"] = next_x_vals;
           msgJson["next_y"] = next_y_vals;
