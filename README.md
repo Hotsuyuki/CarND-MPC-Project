@@ -3,6 +3,32 @@ Self-Driving Car Engineer Nanodegree Program
 
 ---
 
+## The Model
+##### Student describes their model in detail.
+
+The vehicle state includes `x`, `y`, `psi` (orientation angle), `velocity`, `Cross-Track Error`, and `Error of psi` as shown below. Actuators are `acceleration` (throttle) and `delta` (steering angle).
+
+<div style="text-align:center"><img src ="./images/vehicle_model.png" /></div>
+<br/>
+
+## Timestep Length and Elapsed Duration (N & dt)
+##### Student discusses the reasoning behind the chosen N (timestep length) and dt (elapsed duration between timesteps) values.
+
+The choosen values are `N = 10` and `dt = 0.1`. I tried some patterns including `N = 5`/`dt = 0.2` and `N = 20`/`dt = 0.05`, but these patters doesn't work well (the vehicle stops erratically). It is assumed that because the latency of actuators is 100ms (=0.1s).
+
+## Polynomial Fitting and MPC Preprocessing
+##### If the student preprocesses waypoints, the vehicle state, and/or actuators prior to the MPC procedure it is described.
+
+I transformed the waypoints returned by server from map coordinate to vehicle coordinate using a rotation matrix ([main.cpp, Line:109](https://github.com/Hotsuyuki/CarND-MPC-Project/blob/master/src/main.cpp#L109)). This transformation makes `x`, `y`, and `psi` constant value 0, and it simplifies the later processes.
+
+<div style="text-align:center"><img src ="./images/coordinate.png" /></div>
+<br/>
+
+## Model Predictive Control with Latency
+##### The student implements Model Predictive Control that handles a 100 millisecond latency.
+
+In this program the elapsed duration `dt` is same as the latency, which is 100ms, so I use the actuator values from the  **previous** timestep (not the *current* timestep) to update the next timestep state.
+
 ## Dependencies
 
 * cmake >= 3.5

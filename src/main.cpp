@@ -99,7 +99,7 @@ int main() {
           *
           */
 
-          // Transform the waypoints from the map coordinate to the vehicle coordinate
+          // Transform the waypoints from map coordinate to vehicle coordinate
           assert(ptsx.size() == ptsy.size());
           Eigen::VectorXd ptsx_car(ptsx.size()); // vehicle coordinate
           Eigen::VectorXd ptsy_car(ptsx.size()); // vehicle coordinate
@@ -113,9 +113,9 @@ int main() {
           // Polynomial fitting in 3rd order
           auto coeffs_car = polyfit(ptsx_car, ptsy_car, 3); // vehicle coordinate
 
-          double px_car = 0.0; // `px_car` is always 0 in the vehicle coordinate
-          double py_car = 0.0; // `py_car` is always 0 in the vehicle coordinate
-          double psi_car = 0.0; // `psi_car` is always 0 in the vehicle coordinate
+          const double px_car = 0.0; // `px_car` is always 0 in the vehicle coordinate
+          const double py_car = 0.0; // `py_car` is always 0 in the vehicle coordinate
+          const double psi_car = 0.0; // `psi_car` is always 0 in the vehicle coordinate
           double v_car = v; // `v_car` in the vehicle coordinate is always same as `v` in the map coordinate
           double cte_car = polyeval(coeffs_car, px_car) - py_car; // vehicle coordinate
           double epsi_car = psi_car - atan(coeffs_car[1]); // vehicle coordinate
