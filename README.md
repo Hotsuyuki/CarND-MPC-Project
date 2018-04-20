@@ -4,7 +4,7 @@ Self-Driving Car Engineer Nanodegree Program
 ---
 
 ## The Model
-##### Student describes their model in detail.
+#### Student describes their model in detail.
 
 The vehicle state includes `x`, `y`, `psi` (orientation angle), `velocity`, `Cross-Track Error`, and `Error of psi` as shown below. Actuators are `acceleration` (throttle) and `delta` (steering angle).
 
@@ -12,14 +12,14 @@ The vehicle state includes `x`, `y`, `psi` (orientation angle), `velocity`, `Cro
 <br/>
 
 ## Timestep Length and Elapsed Duration (N & dt)
-##### Student discusses the reasoning behind the chosen N (timestep length) and dt (elapsed duration between timesteps) values.
+#### Student discusses the reasoning behind the chosen N (timestep length) and dt (elapsed duration between timesteps) values.
 
 The chosen values are `N = 10` and `dt = 0.1`. `N` is the total number of predicted points (number of green points) and `dt` is the time between each predicting (distance between each green points). The time horizon is `N * dt`, which means length of green line in the simulator.
 Lager `N` lets MPC predict further future points but it makes solver compute slower. Smaller `dt` allows to predict future position in finer resolution and near future, so basically the accuracy will be better.
 However, too many `N` (long time to compute) and too small `dt` (the first predicted point is very near in front of the vehicle) would cause poor performance of MPC, which means the vehicle cloud drive ahead of the predicted points.
 
 ## Polynomial Fitting and MPC Preprocessing
-##### If the student preprocesses waypoints, the vehicle state, and/or actuators prior to the MPC procedure it is described.
+#### If the student preprocesses waypoints, the vehicle state, and/or actuators prior to the MPC procedure it is described.
 
 I transformed the waypoints returned by server from map coordinate to vehicle coordinate using a rotation matrix ([main.cpp, Line:102](https://github.com/Hotsuyuki/CarND-MPC-Project/blob/master/src/main.cpp#L102)).
 
@@ -30,11 +30,11 @@ ptsy_car(i) = -x*sin(psi) + y*cos(psi);
 
 This transformation makes `x`, `y`, and `psi` constant value 0, and it simplifies the later processes.
 
-<div style="text-align:center"><img src ="./images/vehicle_model.png" /></div>
+<div style="text-align:center"><img src ="./images/coordinate.png" /></div>
 <br/>
 
 ## Model Predictive Control with Latency
-##### The student implements Model Predictive Control that handles a 100 millisecond latency.
+#### The student implements Model Predictive Control that handles a 100 millisecond latency.
 
 This program predicts one step (= one latency) next state before sending the vehicle state to MPC, and send the new future state ([main.cpp, Line:126](https://github.com/Hotsuyuki/CarND-MPC-Project/blob/master/src/main.cpp#L126)).
 
