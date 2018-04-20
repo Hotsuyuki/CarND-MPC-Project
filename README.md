@@ -24,6 +24,8 @@ However, too many `N` (long time to compute) and too small `dt` (the first predi
 I transformed the waypoints returned by server from map coordinate to vehicle coordinate using a rotation matrix ([main.cpp, Line:102](https://github.com/Hotsuyuki/CarND-MPC-Project/blob/master/src/main.cpp#L102)).
 
 ```cpp
+double x = ptsx[i] - px;
+double y = ptsy[i] - py;
 ptsx_car(i) = x*cos(psi) + y*sin(psi);
 ptsy_car(i) = -x*sin(psi) + y*cos(psi);
 ```
