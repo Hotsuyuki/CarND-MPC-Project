@@ -128,14 +128,14 @@ int main() {
           const double Lf = 2.67; //[m]
           double latency = 0.1; //[s]
           // the current steering angle and throttle to predict the future state
-          double delta = double(j[1]["steering_angle"]) * deg2rad(25); //[-deg2rad(25), deg2rad(25)]
+          double delta = j[1]["steering_angle"];
           double a = j[1]["throttle"];
           px_car += v_car * cos(psi_car) * latency;
           py_car += v_car * sin(psi_car) * latency;
           psi_car += v_car/Lf * (-delta) * latency;
           cte_car += v_car * sin(epsi_car) * latency;
           epsi_car += v_car/Lf * (-delta) * latency;
-          v_car +=  a * latency; // Update velcity last because other state uses the current velocity (not future velocity)
+          v_car +=  a * latency; // Update velocity last because other state uses the current velocity (not future velocity)
 
           Eigen::VectorXd state_car(6); // vehicle coordinate
           state_car << px_car, py_car, psi_car, v_car, cte_car, epsi_car;
