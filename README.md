@@ -14,20 +14,45 @@ The vehicle state includes `x`, `y`, `psi` (orientation angle), `velocity`, `Cro
 ## Timestep Length and Elapsed Duration (N & dt)
 ##### Student discusses the reasoning behind the chosen N (timestep length) and dt (elapsed duration between timesteps) values.
 
-The choosen values are `N = 10` and `dt = 0.1`. I tried some patterns including `N = 5`/`dt = 0.2` and `N = 20`/`dt = 0.05`, but these patters doesn't work well (the vehicle stops erratically). It is assumed that because the latency of actuators is 100ms (=0.1s).
+The chosen values are `N = 10` and `dt = 0.1`. `N` is the total number of predicted points (number of green points) and `dt` is the time between each predicting (distance between each green points). The time horizon is `N * dt`, which means length of green line in the simulator.
+Lager `N` lets MPC predict further future points but it makes solver compute slower. Smaller `dt` allows to predict future position in finer resolution and near future, so basically the accuracy will be better.
+However, too many `N` (long time to compute) and too small `dt` (the first predicted point is very near in front of the vehicle) would cause poor performance of MPC, which means the vehicle cloud drive ahead of the predicted points.
 
 ## Polynomial Fitting and MPC Preprocessing
 ##### If the student preprocesses waypoints, the vehicle state, and/or actuators prior to the MPC procedure it is described.
 
-I transformed the waypoints returned by server from map coordinate to vehicle coordinate using a rotation matrix ([main.cpp, Line:109](https://github.com/Hotsuyuki/CarND-MPC-Project/blob/master/src/main.cpp#L109)). This transformation makes `x`, `y`, and `psi` constant value 0, and it simplifies the later processes.
+I transformed the waypoints returned by server from map coordinate to vehicle coordinate using a rotation matrix ([main.cpp, Line:102](https://github.com/Hotsuyuki/CarND-MPC-Project/blob/master/src/main.cpp#L102)).
 
-<div style="text-align:center"><img src ="./images/coordinate.png" /></div>
+```cpp
+ptsx_car(i) = x*cos(psi) + y*sin(psi);
+ptsy_car(i) = -x*sin(psi) + y*cos(psi);
+```
+
+This transformation makes `x`, `y`, and `psi` constant value 0, and it simplifies the later processes.
+
+<div style="text-align:center"><img src ="./images/vehicle_model.png" /></div>
 <br/>
 
 ## Model Predictive Control with Latency
 ##### The student implements Model Predictive Control that handles a 100 millisecond latency.
 
-In this program the elapsed duration `dt` is same as the latency, which is 100ms, so I use the actuator values from the  **previous** timestep (not the *current* timestep) to update the next timestep state.
+This program predicts one step (= one latency) next state before sending the vehicle state to MPC, and send the new future state ([main.cpp, Line:126](https://github.com/Hotsuyuki/CarND-MPC-Project/blob/master/src/main.cpp#L126)).
+
+```cpp
+const double Lf = 2.67; //[m]
+double latency = 0.1; //[s]
+// the current steering angle and throttle to predict the future state
+double delta = double(j[1]["steering_angle"]) * deg2rad(25); //[-deg2rad(25), deg2rad(25)]
+double a = j[1]["throttle"];
+px_car += v_car * cos(psi_car) * latency;
+py_car += v_car * sin(psi_car) * latency;
+psi_car += v_car/Lf * (-delta) * latency;
+cte_car += v_car * sin(epsi_car) * latency;
+epsi_car += v_car/Lf * (-delta) * latency;
+v_car +=  a * latency; // Update velcity last because other state uses the current velocity (not future velocity)
+```
+
+Note that `delta` has to be multiplied by 0.436[rad] (=25[deg]) because it is divided by the same value when send back to the server.
 
 ## Dependencies
 

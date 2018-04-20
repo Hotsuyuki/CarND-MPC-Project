@@ -90,7 +90,7 @@ int main() {
           double px = j[1]["x"]; // map coordinate
           double py = j[1]["y"]; // map coordinate
           double psi = j[1]["psi"]; // map coordinate
-          double v = j[1]["speed"]; // map coordinate
+          double v = j[1]["speed"]; // map coordinate //[mph]
 
           /*
           * TODO: Calculate steering angle and throttle using MPC.
@@ -113,12 +113,29 @@ int main() {
           // Polynomial fitting in 3rd order
           auto coeffs_car = polyfit(ptsx_car, ptsy_car, 3); // vehicle coordinate
 
-          const double px_car = 0.0; // `px_car` is always 0 in the vehicle coordinate
-          const double py_car = 0.0; // `py_car` is always 0 in the vehicle coordinate
-          const double psi_car = 0.0; // `psi_car` is always 0 in the vehicle coordinate
+          // [mph]-->[m/s] But this makes the vehicle diverging
+          //v *= 0.44704;
+
+          double px_car = 0.0; // `px_car` is always 0 in the vehicle coordinate
+          double py_car = 0.0; // `py_car` is always 0 in the vehicle coordinate
+          double psi_car = 0.0; // `psi_car` is always 0 in the vehicle coordinate
           double v_car = v; // `v_car` in the vehicle coordinate is always same as `v` in the map coordinate
           double cte_car = polyeval(coeffs_car, px_car) - py_car; // vehicle coordinate
           double epsi_car = psi_car - atan(coeffs_car[1]); // vehicle coordinate
+
+          // Before sending the vehicle state to MPC, predict one step (= one latency) next state
+          // and send the future state to MPC in order to deal with the latency.
+          const double Lf = 2.67; //[m]
+          double latency = 0.1; //[s]
+          // the current steering angle and throttle to predict the future state
+          double delta = double(j[1]["steering_angle"]) * deg2rad(25); //[-deg2rad(25), deg2rad(25)]
+          double a = j[1]["throttle"];
+          px_car += v_car * cos(psi_car) * latency;
+          py_car += v_car * sin(psi_car) * latency;
+          psi_car += v_car/Lf * (-delta) * latency;
+          cte_car += v_car * sin(epsi_car) * latency;
+          epsi_car += v_car/Lf * (-delta) * latency;
+          v_car +=  a * latency; // Update velcity last because other state uses the current velocity (not future velocity)
 
           Eigen::VectorXd state_car(6); // vehicle coordinate
           state_car << px_car, py_car, psi_car, v_car, cte_car, epsi_car;
@@ -135,8 +152,8 @@ int main() {
 
           json msgJson;
           // NOTE: Remember to divide by deg2rad(25) before you send the steering value back.
-          // Otherwise the values will be in between [-deg2rad(25), deg2rad(25] instead of [-1, 1].
-          msgJson["steering_angle"] = steer_value / (deg2rad(25));
+          // Otherwise the values will be in between [-deg2rad(25), deg2rad(25)] instead of [-1, 1].
+          msgJson["steering_angle"] = steer_value / deg2rad(25); //[-1, 1]
           msgJson["throttle"] = throttle_value;
 
           //Display the MPC predicted trajectory
@@ -182,7 +199,7 @@ int main() {
           //
           // NOTE: REMEMBER TO SET THIS TO 100 MILLISECONDS BEFORE
           // SUBMITTING.
-          this_thread::sleep_for(chrono::milliseconds(100));
+          this_thread::sleep_for(chrono::milliseconds(int(1000*latency))); //[ms]
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
         }
       } else {
